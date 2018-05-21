@@ -3,12 +3,13 @@
 
 '''
 Ett litet script för att hämta data på Arkivnivå från den Nationella Arkivdatabasen (NAD)
+
 Användning:
-$ python nad.py --h <huvudkategori> --p <antal sidor att iterer> --a <Arkivinstitution> --f <filnamn>
+$ python nad.py --hk <huvudkategori> --p <antal sidor att iterer> --a <Arkivinstitution> --f <filnamn>
 
 ex.
-$ python nad.py --h 7 --p 20 --a Landsakrivet+i+Lund --f utfil.csv
-$ python nad.py --h 6 --p 30 --a Region+och+Stadsarkivet+Göteborg --f utfil.csv
+$ python nad.py --hk 7 --p 20 --a Landsakrivet+i+Lund --f utfil.csv
+$ python nad.py --hk 6 --p 30 --a Region+och+Stadsarkivet+Göteborg --f utfil.csv
 Huvudkategorier:
 0 = Ej fastställt
 1 = Statlig myndighet
@@ -26,6 +27,12 @@ import codecs
 from bs4 import BeautifulSoup
 from time import sleep
 import optparse
+import sys
+if (sys.version_info < (3, 0)):
+    reload(sys)  # Reload does the trick!
+    sys.setdefaultencoding('UTF8')
+
+
 op = optparse.OptionParser()
 op.add_option('--hk', dest="hk", choices=['0', '1', '2', '3', '4','5','6','7','9'], default='6')
 op.add_option('--p', dest="p", default=20)
@@ -37,22 +44,22 @@ headers = u'no; arkiv; datering; omfång; villkor; villkorsanm; tillståndsgivar
 with codecs.open(opts.f,'a', 'utf-8') as f:
     f.write(headers)
     f.write('\n')
-    for page in range(1,opts.p):
+    for page in range(1,int(opts.p)):
 
-        print opts.p
+        print (opts.p)
         r = requests.get(u'https://sok.riksarkivet.se/nad?EndastDigitaliserat=false&BegransaPaTitelEllerNamn=false&Arkivinstitution={}&Typ=Arkiv&Huvudkategori={}&AvanceradSok=true&typAvLista=Standard&page={}&FacettState=undefined%3Ac%7C#tab'.format(opts.a,opts.hk,page))
 
-        soup = BeautifulSoup(r.content)
+        soup = BeautifulSoup(r.content, 'html.parser' )
 
         data = {}
 
         for div in soup.find_all('div',{"class": "span12"}):
             for divx in div.find_all('div'):
                 if divx.string:
-                    print divx.string
+                    print (divx.string)
                     data[u'no'] = divx.string.replace('. Arkiv','')
                 for href in divx.find_all('a', href=True):
-                    print href.string
+                    print (href.string)
                     data['arkiv'] = (href.string)
                     r = requests.get('https://sok.riksarkivet.se/{}'.format(href['href']))
                     if r.status_code != 200:
@@ -60,7 +67,7 @@ with codecs.open(opts.f,'a', 'utf-8') as f:
                         r = requests.get('https://sok.riksarkivet.se/{}'.format(href['href']))
 
 
-                    soup = BeautifulSoup(r.content)
+                    soup = BeautifulSoup(r.content, 'html.parser')
                     table = soup.find('table', attrs={'class': 'cssTabViewDisplay'})
                     for tr in table.find_all('tr'):
                         td = tr.find('td', attrs={'class': 'subTblCellLabel'})
